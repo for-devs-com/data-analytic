@@ -1,4 +1,4 @@
-package ai.dataanalytic.databridge.processor;//package ai.dataanalytic.databridge.processor;
+//package ai.dataanalytic.databridge.processor;
 //
 //import ai.dataanalytic.databridge.entity.mysql.MySqlStudent;
 //import ai.dataanalytic.databridge.entity.postgresql.PostgreSqlStudent;
