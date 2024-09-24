@@ -1,4 +1,4 @@
-package com.fordevs.querybridge.dto;
+package ai.dataanalytic.querybridge.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -1,7 +1,7 @@
-package com.fordevs.querybridge.service;
+package ai.dataanalytic.querybridge.service;
 
 
-import com.fordevs.sharedlibrary.dto.DatabaseConnectionRequest;
+import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;

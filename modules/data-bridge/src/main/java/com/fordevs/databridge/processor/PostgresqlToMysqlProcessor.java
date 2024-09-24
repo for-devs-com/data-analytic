@@ -1,7 +1,7 @@
-package com.fordevs.databridge.processor;//package com.fordevs.databridge.processor;
+package ai.dataanalytic.databridge.processor;//package ai.dataanalytic.databridge.processor;
 //
-//import com.fordevs.databridge.entity.mysql.MySqlStudent;
-//import com.fordevs.databridge.entity.postgresql.PostgreSqlStudent;
+//import ai.dataanalytic.databridge.entity.mysql.MySqlStudent;
+//import ai.dataanalytic.databridge.entity.postgresql.PostgreSqlStudent;
 //import org.springframework.batch.item.ItemProcessor;
 //import org.springframework.stereotype.Component;
 //

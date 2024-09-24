@@ -1,4 +1,4 @@
-//package com.fordevs.databridge.utils;
+//package ai.dataanalytic.databridge.utils;
 //
 //import jakarta.annotation.PostConstruct;
 //import org.springframework.beans.factory.annotation.Autowired;

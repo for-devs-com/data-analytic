@@ -1,4 +1,4 @@
-package com.fordevs.sharedlibrary.util;
+package ai.dataanalytic.sharedlibrary.util;
 
 import lombok.extern.slf4j.Slf4j;
 

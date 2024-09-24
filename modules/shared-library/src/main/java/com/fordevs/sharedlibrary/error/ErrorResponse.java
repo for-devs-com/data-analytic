@@ -1,4 +1,4 @@
-package com.fordevs.sharedlibrary.error;
+package ai.dataanalytic.sharedlibrary.error;
 
 import lombok.Data;
 

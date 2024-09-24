@@ -1,4 +1,4 @@
-package com.fordevs.querybridge.config;
+package ai.dataanalytic.querybridge.config;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

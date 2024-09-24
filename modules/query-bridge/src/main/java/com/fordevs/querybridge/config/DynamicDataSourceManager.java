@@ -1,7 +1,7 @@
-package com.fordevs.querybridge.config;
+package ai.dataanalytic.querybridge.config;
 
 
-import com.fordevs.sharedlibrary.dto.DatabaseConnectionRequest;
+import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;

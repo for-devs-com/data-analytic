@@ -1,8 +1,8 @@
-package com.fordevs.querybridge.service;
+package ai.dataanalytic.querybridge.service;
 
-import com.fordevs.querybridge.config.DynamicDataSourceManager;
-import com.fordevs.querybridge.dto.DynamicTableData;
-import com.fordevs.sharedlibrary.dto.DatabaseConnectionRequest;
+import ai.dataanalytic.querybridge.config.DynamicDataSourceManager;
+import ai.dataanalytic.querybridge.dto.DynamicTableData;
+import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;

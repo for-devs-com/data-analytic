@@ -1,4 +1,4 @@
-package com.fordevs.querybridge.config;
+package ai.dataanalytic.querybridge.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;

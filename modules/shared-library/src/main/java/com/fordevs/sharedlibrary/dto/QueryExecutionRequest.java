@@ -1,4 +1,4 @@
-package com.fordevs.sharedlibrary.dto;
+package ai.dataanalytic.sharedlibrary.dto;
 
 import lombok.Data;
 

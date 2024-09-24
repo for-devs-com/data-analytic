@@ -1,4 +1,4 @@
-package com.fordevs.databridge.config;
+package ai.dataanalytic.databridge.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

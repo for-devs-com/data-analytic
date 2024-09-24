@@ -1,4 +1,4 @@
-package com.fordevs.sharedlibrary.constants;
+package ai.dataanalytic.sharedlibrary.constants;
 
 public class ErrorMessages {
     public static final String INVALID_DATABASE_DETAILS = "Invalid database connection details.";

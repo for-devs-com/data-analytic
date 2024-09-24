@@ -1,7 +1,7 @@
-package com.fordevs.querybridge.controller;
+package ai.dataanalytic.querybridge.controller;
 
-import com.fordevs.querybridge.service.DatabaseService;
-import com.fordevs.sharedlibrary.dto.DatabaseConnectionRequest;
+import ai.dataanalytic.querybridge.service.DatabaseService;
+import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

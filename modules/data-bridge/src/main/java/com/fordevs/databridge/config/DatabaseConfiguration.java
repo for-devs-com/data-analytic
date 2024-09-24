@@ -1,7 +1,7 @@
-//package com.fordevs.databridge.config;
+//package ai.dataanalytic.databridge.config;
 //
-//import com.fordevs.databridge.entity.mysql.MySqlStudent;
-//import com.fordevs.databridge.entity.postgresql.PostgreSqlStudent;
+//import ai.dataanalytic.databridge.entity.mysql.MySqlStudent;
+//import ai.dataanalytic.databridge.entity.postgresql.PostgreSqlStudent;
 //import org.springframework.batch.core.Job;
 //import org.springframework.batch.core.Step;
 //import org.springframework.batch.core.configuration.support.DefaultBatchConfiguration;

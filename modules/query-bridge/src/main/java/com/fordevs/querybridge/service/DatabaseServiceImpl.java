@@ -1,9 +1,9 @@
-package com.fordevs.querybridge.service;
+package ai.dataanalytic.querybridge.service;
 
-import com.fordevs.querybridge.config.DataSourceContextService;
-import com.fordevs.querybridge.config.DynamicDataSourceManager;
-import com.fordevs.sharedlibrary.dto.DatabaseConnectionRequest;
-import com.fordevs.querybridge.dto.DynamicTableData;
+import ai.dataanalytic.querybridge.config.DataSourceContextService;
+import ai.dataanalytic.querybridge.config.DynamicDataSourceManager;
+import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
+import ai.dataanalytic.querybridge.dto.DynamicTableData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;

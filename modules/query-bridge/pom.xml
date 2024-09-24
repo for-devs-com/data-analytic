@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.fordevs</groupId>
+        <groupId>ai.dataanalytic</groupId>
         <artifactId>data-analytic</artifactId>
         <version>1.0.0</version>
         <relativePath>../../pom.xml</relativePath> <!-- point to root project -->
@@ -61,7 +61,7 @@
 
         <!-- Shared Library Module Dependency -->
         <dependency>
-            <groupId>com.fordevs</groupId>
+            <groupId>ai.dataanalytic</groupId>
             <artifactId>shared-library</artifactId>
             <version>1.0.0</version>
             <scope>compile</scope>
@@ -74,7 +74,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.fordevs</groupId>
+            <groupId>ai.dataanalytic</groupId>
             <artifactId>data-bridge</artifactId>
             <version>1.0.0</version>
             <scope>compile</scope>

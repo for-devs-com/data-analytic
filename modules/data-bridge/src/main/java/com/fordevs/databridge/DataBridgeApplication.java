@@ -1,10 +1,10 @@
-//package com.fordevs.databridge;
+//package ai.dataanalytic.databridge;
 //
 //import org.springframework.boot.SpringApplication;
 //import org.springframework.boot.autoconfigure.SpringBootApplication;
 //import org.springframework.context.annotation.ComponentScan;
 //
-//@SpringBootApplication(scanBasePackages = "com.fordevs.databridge")
+//@SpringBootApplication(scanBasePackages = "ai.dataanalytic.databridge")
 //public class DataBridgeApplication {
 //
 //    public static void main(String[] args) {

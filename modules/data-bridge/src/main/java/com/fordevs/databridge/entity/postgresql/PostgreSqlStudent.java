@@ -1,4 +1,4 @@
-//package com.fordevs.databridge.entity.postgresql;
+//package ai.dataanalytic.databridge.entity.postgresql;
 //
 //import jakarta.persistence.Column;
 //import jakarta.persistence.Entity;

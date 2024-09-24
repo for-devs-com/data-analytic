@@ -1,4 +1,4 @@
-package com.fordevs.databridge.dto;
+package ai.dataanalytic.databridge.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

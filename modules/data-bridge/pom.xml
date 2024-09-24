@@ -6,7 +6,7 @@
 
     <!-- Parent project -->
     <parent>
-        <groupId>com.fordevs</groupId>
+        <groupId>ai.dataanalytic</groupId>
         <artifactId>data-analytic</artifactId>
         <version>1.0.0</version>
         <relativePath>../../pom.xml</relativePath> <!-- points to root project -->
@@ -62,7 +62,7 @@
 
         <!-- Shared Library Module -->
         <dependency>
-            <groupId>com.fordevs</groupId>
+            <groupId>ai.dataanalytic</groupId>
             <artifactId>shared-library</artifactId>
             <version>1.0.0</version>
         </dependency>
