@@ -1,5 +1,6 @@
 package ai.dataanalytic.databridge.config;
 
+import ai.dataanalytic.databridge.service.QueryBridgeClient;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.support.DefaultBatchConfiguration;
@@ -16,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.client.RestTemplate;
 
 import javax.sql.DataSource;
 import java.util.Map;
@@ -50,10 +52,9 @@ public class DatabaseConfiguration extends DefaultBatchConfiguration {
     }
 
     @Bean
-    @Qualifier("chunkJob")
     public Job chunkJob(
             JobRepository jobRepository,
-            @Qualifier("firstChunkStep") Step firstChunkStep) {
+            Step firstChunkStep) {
         return new JobBuilder("chunkJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
                 .start(firstChunkStep)
@@ -61,30 +62,19 @@ public class DatabaseConfiguration extends DefaultBatchConfiguration {
     }
 
     @Bean
-    @Qualifier("firstChunkStep")
     public Step firstChunkStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
-            @Qualifier("queryBridgeReader") ItemReader<Map<String, Object>> queryBridgeReader,
-            @Qualifier("queryBridgeWriter") ItemWriter<Map<String, Object>> queryBridgeWriter) {
+            QueryBridgeReader queryBridgeReader,
+            QueryBridgeWriter queryBridgeWriter) {
         return new StepBuilder("firstChunkStep", jobRepository)
-                .<Map<String, Object>, Map<String, Object>>chunk(200, transactionManager)
+                .<Map<String, Object>, Map<String, Object>>chunk(100, transactionManager)
                 .reader(queryBridgeReader)
                 .writer(queryBridgeWriter)
                 .build();
     }
 
-    // The ItemReader uses Query-Bridge API to dynamically fetch data
-    @Bean
-    @Qualifier("queryBridgeReader")
-    public ItemReader<Map<String, Object>> queryBridgeReader() {
-        return new QueryBridgeReader();
-    }
 
-    // The ItemWriter uses Query-Bridge API to write the data back
-    @Bean
-    @Qualifier("queryBridgeWriter")
-    public ItemWriter<Map<String, Object>> queryBridgeWriter() {
-        return new QueryBridgeWriter();
-    }
+
+
 }

@@ -1,19 +1,27 @@
 package ai.dataanalytic.databridge.config;
 
-import ai.dataanalytic.databridge.service.QueryBridgeClient;
-import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.jdbc.core.RowMapper;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import javax.sql.DataSource;
+import java.util.HashMap;
 import java.util.Map;
 
-public class QueryBridgeReader implements ItemReader<Map<String, Object>> {
+public class QueryBridgeReader extends JdbcCursorItemReader<Map<String, Object>> {
 
-    private final QueryBridgeClient queryBridgeClient;
-
-    public QueryBridgeReader(QueryBridgeClient queryBridgeClient) {
-        this.queryBridgeClient = queryBridgeClient;
-    }
-
-    @Override
-    public Map<String, Object> read() throws Exception {
-        return queryBridgeClient.fetchNextRow(); // Calling QueryBridge to fetch row data
+    public QueryBridgeReader(DataSource dataSource, String query) {
+        setDataSource(dataSource);
+        setSql(query);
+        setRowMapper((rs, rowNum) -> {
+            // Dynamically map the columns to a Map
+            ResultSetMetaData metaData = rs.getMetaData();
+            Map<String, Object> row = new HashMap<>();
+            for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                row.put(metaData.getColumnLabel(i), rs.getObject(i));
+            }
+            return row;
+        });
     }
 }
