@@ -63,9 +63,9 @@ public class DatabaseNavigatorController {
      */
     @GetMapping("/data/{tableName}")
     public ResponseEntity<Map<String, Object>> getTableData(
-            @PathVariable String tableName,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @PathVariable("tableName") String tableName,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size) {
         return databaseService.getTableData(tableName, page, size);
     }
 
