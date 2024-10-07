@@ -1,5 +1,6 @@
 package ai.dataanalytic.querybridge.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -7,6 +8,7 @@ import org.springframework.stereotype.Service;
  * Service class to manage the current JdbcTemplate context using ThreadLocal.
  * This allows each thread to have its own JdbcTemplate instance.
  */
+@Slf4j
 @Service
 public class DataSourceContextService {
 
@@ -19,6 +21,7 @@ public class DataSourceContextService {
      * @param jdbcTemplate the JdbcTemplate to set
      */
     public static void setCurrentTemplate(JdbcTemplate jdbcTemplate) {
+        log.info("Current Template: {}", jdbcTemplate);
         currentTemplate.set(jdbcTemplate);
     }
 

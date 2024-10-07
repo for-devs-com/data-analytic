@@ -22,6 +22,8 @@ public class QueryBridgeDatabaseClient {
 
     public void connectToDatabase(DatabaseConnectionRequest request) {
         log.info("Connecting to database: {} on host: {}", request.getDatabaseName(), request.getHost());
+
+        log.debug("Sending request to URL: {}", queryBridgeUrl + "/connect");
         // Append /connect to the base URL defined in application.properties
         restTemplate.postForEntity(queryBridgeUrl + "/connect", request, Void.class);
         log.info("Database connection established successfully");
