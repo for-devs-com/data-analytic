@@ -1,6 +1,7 @@
-package ai.dataanalytic.querybridge.config;
+package ai.dataanalytic.sharedlibrary.service;
 
 
+import ai.dataanalytic.sharedlibrary.config.DataSourceContextService;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -19,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
-public class DynamicDataSourceManager {
+public class DynamicDataSourceManagerService {
 
     // Cache to store JdbcTemplate instances by their key
     private final Map<String, JdbcTemplate> dataSourceCache = new ConcurrentHashMap<>();
@@ -142,4 +143,22 @@ public class DynamicDataSourceManager {
     public String getKey(DatabaseConnectionRequest credentials) {
         return generateKeyForUserDataSource(credentials);
     }
+
+    public DataSource getDataSource(DatabaseConnectionRequest credentials) {
+        // Generate a unique key for the data source based on credentials
+        String key = generateKeyForUserDataSource(credentials);
+
+        // Check if the data source already exists in the cache
+        if (dataSourceCache.containsKey(key)) {
+            return dataSourceCache.get(key).getDataSource();
+        }
+
+        // Create a new data source and add it to the cache if it doesn't exist
+        DataSource dataSource = createDataSource(credentials);
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        dataSourceCache.put(key, jdbcTemplate);
+
+        return dataSource;
+    }
+
 }

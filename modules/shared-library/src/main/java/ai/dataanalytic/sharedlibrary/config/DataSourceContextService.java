@@ -1,4 +1,4 @@
-package ai.dataanalytic.querybridge.config;
+package ai.dataanalytic.sharedlibrary.config;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

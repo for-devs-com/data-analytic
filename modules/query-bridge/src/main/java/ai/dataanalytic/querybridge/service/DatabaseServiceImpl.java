@@ -1,7 +1,7 @@
 package ai.dataanalytic.querybridge.service;
 
-import ai.dataanalytic.querybridge.config.DataSourceContextService;
-import ai.dataanalytic.querybridge.config.DynamicDataSourceManager;
+import ai.dataanalytic.sharedlibrary.config.DataSourceContextService;
+import ai.dataanalytic.sharedlibrary.service.DynamicDataSourceManagerService;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import ai.dataanalytic.querybridge.dto.DynamicTableData;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
 public class DatabaseServiceImpl implements DatabaseService {
 
     @Autowired
-    private DynamicDataSourceManager dynamicDataSourceManager;
+    private DynamicDataSourceManagerService dynamicDataSourceManagerService;
 
     @Autowired
     private DataSourceContextService dataSourceContextService;
@@ -44,33 +44,42 @@ public class DatabaseServiceImpl implements DatabaseService {
 
     @Override
     public ResponseEntity<String> setDatabaseConnection(DatabaseConnectionRequest databaseConnectionRequest) {
-        // Validate the provided credentials
+        log.debug("Starting database connection process for database: {}", databaseConnectionRequest.getDatabaseName());
+
         if (!validateCredentials(databaseConnectionRequest)) {
+            log.debug("Invalid credentials provided for database: {}", databaseConnectionRequest.getDatabaseName());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid credentials provided");
         }
 
-        this.databaseConnectionRequest = databaseConnectionRequest; // Store the credentials for future use
+        this.databaseConnectionRequest = databaseConnectionRequest;
+        log.debug("Credentials stored for database: {}", databaseConnectionRequest.getDatabaseName());
 
         try {
-            // Try to create and test a database connection with the provided credentials.
-            // The createAndTestConnection method returns true if the connection is successful.
-            // The '!' operator inverts the result, so this condition is true if the connection fails.
-            if (!dynamicDataSourceManager.createAndTestConnection(databaseConnectionRequest)) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to connect to database: " + databaseConnectionRequest.getDatabaseName());
+            log.debug("Attempting to create and test connection for database: {}", databaseConnectionRequest.getDatabaseName());
+            if (!dynamicDataSourceManagerService.createAndTestConnection(databaseConnectionRequest)) {
+                log.debug("Failed to establish connection to database: {}", databaseConnectionRequest.getDatabaseName());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Failed to connect to database: " + databaseConnectionRequest.getDatabaseName());
             }
 
-            // Retrieve the key for the DataSource
-            String dataSourceKey = dynamicDataSourceManager.getKey(databaseConnectionRequest);
-            // Retrieve the JdbcTemplate for the database
-            JdbcTemplate jdbcTemplate = dynamicDataSourceManager.getJdbcTemplateForDb(dataSourceKey);
-            // Set the current JdbcTemplate in the data source context
+            String dataSourceKey = dynamicDataSourceManagerService.getKey(databaseConnectionRequest);
+            log.debug("Data source key generated: {}", dataSourceKey);
+
+            JdbcTemplate jdbcTemplate = dynamicDataSourceManagerService.getJdbcTemplateForDb(dataSourceKey);
+            log.debug("JdbcTemplate retrieved for data source key: {}", dataSourceKey);
+
             DataSourceContextService.setCurrentTemplate(jdbcTemplate);
+            log.debug("JdbcTemplate set in DataSourceContextService for database: {}", databaseConnectionRequest.getDatabaseName());
+
+            log.debug("Successfully connected to database: {}", databaseConnectionRequest.getDatabaseName());
             return ResponseEntity.ok("Connected successfully to database: " + databaseConnectionRequest.getDatabaseName());
+
         } catch (Exception e) {
-            log.error("Error connecting to the database", e);
+            log.error("Error connecting to the database: {}", databaseConnectionRequest.getDatabaseName(), e);
             return handleException(e, "Error connecting to the database: ");
         }
     }
+
 
     @Override
     public ResponseEntity<List<String>> listTables() {
@@ -101,7 +110,7 @@ public class DatabaseServiceImpl implements DatabaseService {
 
         try {
             // Retrieve the key for the DataSource
-            String dataSourceKey = dynamicDataSourceManager.getKey(this.databaseConnectionRequest);
+            String dataSourceKey = dynamicDataSourceManagerService.getKey(this.databaseConnectionRequest);
             // Get the list of columns in the specified table
             List<Map<String, Object>> columns = schemaDiscoveryService.listColumns(tableName, dataSourceKey);
             return ResponseEntity.ok(columns);
@@ -167,11 +176,11 @@ public class DatabaseServiceImpl implements DatabaseService {
 
             // Retrieve the key for the DataSource
             // Get the unique key for the current database credentials.
-            String dataSourceKey = dynamicDataSourceManager.getKey(this.databaseConnectionRequest);
+            String dataSourceKey = dynamicDataSourceManagerService.getKey(this.databaseConnectionRequest);
 
             // Retrieve the JdbcTemplate for the database
             // Get the JdbcTemplate instance for the specified dataSourceKey.
-            JdbcTemplate jdbcTemplate = dynamicDataSourceManager.getJdbcTemplateForDb(dataSourceKey);
+            JdbcTemplate jdbcTemplate = dynamicDataSourceManagerService.getJdbcTemplateForDb(dataSourceKey);
 
             // Execute the query and get the result
             // Use the JdbcTemplate to execute the SQL query and retrieve the result as a list of maps (each map represents a row).

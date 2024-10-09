@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @RequestMapping("/v1/query/bridge/multi/database")
-public class DatabaseConnectionController {
+public class MultiDatabaseConnectionController {
 
     @Autowired
     private DatabaseConnectionService databaseConnectionService;
