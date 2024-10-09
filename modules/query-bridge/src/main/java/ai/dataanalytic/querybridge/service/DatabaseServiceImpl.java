@@ -76,7 +76,7 @@ public class DatabaseServiceImpl implements DatabaseService {
     public ResponseEntity<List<String>> listTables() {
         // Check if credentials are set
         if (this.databaseConnectionRequest == null) {
-            log.error("Credentials must be set before calling this method.");
+            verifyCredentials();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
 
@@ -95,7 +95,7 @@ public class DatabaseServiceImpl implements DatabaseService {
     public ResponseEntity<List<Map<String, Object>>> listColumns(String tableName) {
         // Check if credentials are set
         if (this.databaseConnectionRequest == null) {
-            log.error("Credentials must be set before calling this method.");
+            verifyCredentials();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
 
@@ -114,11 +114,15 @@ public class DatabaseServiceImpl implements DatabaseService {
         }
     }
 
+    private static void verifyCredentials() {
+        log.error("Credentials must be set before calling this method.");
+    }
+
     @Override
     public ResponseEntity<Map<String, Object>> getTableData(String tableName, int page, int size) {
         // Check if credentials are set
         if (this.databaseConnectionRequest == null) {
-            log.error("Credentials must be set before calling this method.");
+            verifyCredentials();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
 
@@ -149,7 +153,7 @@ public class DatabaseServiceImpl implements DatabaseService {
         // Check if credentials are set
         // If the database credentials are not set, log an error and return an INTERNAL_SERVER_ERROR response.
         if (this.databaseConnectionRequest == null) {
-            log.error("Credentials must be set before calling this method.");
+            verifyCredentials();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
 
