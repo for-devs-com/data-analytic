@@ -1,6 +1,6 @@
 package ai.dataanalytic.querybridge.service;
 
-import ai.dataanalytic.querybridge.config.DynamicDataSourceManager;
+import ai.dataanalytic.querybridge.config.DataSourceConnectionManager;
 import ai.dataanalytic.querybridge.dto.DynamicTableData;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +23,9 @@ import java.util.Map;
 @Slf4j
 public class SchemaDiscoveryService {
 
-    private final DynamicDataSourceManager dataSourceManager;
+    private final DataSourceConnectionManager dataSourceManager;
 
-    public SchemaDiscoveryService(DynamicDataSourceManager dataSourceManager) {
+    public SchemaDiscoveryService(DataSourceConnectionManager dataSourceManager) {
         this.dataSourceManager = dataSourceManager;
     }
 
