@@ -1,41 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <!-- Parent project -->
     <parent>
         <groupId>ai.dataanalytic</groupId>
         <artifactId>data-analytic</artifactId>
         <version>1.0.0</version>
-        <relativePath>../../pom.xml</relativePath> <!-- points to root project -->
+        <relativePath>../../pom.xml</relativePath> <!-- points to a root project -->
     </parent>
-
+    <!--  artifact info  -->
     <artifactId>data-bridge</artifactId>
     <name>DataBridge</name>
     <description>DataBridge Module for Spring Batch PostgreSQL to MySQL Migration</description>
-
+    <properties>
+        <java.version>17</java.version>
+    </properties>
     <dependencies>
-        <!-- Spring Boot Starter for Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
-        <!-- Spring Batch Core Dependency -->
         <dependency>
             <groupId>org.springframework.batch</groupId>
             <artifactId>spring-batch-core</artifactId>
+            <version>5.1.2</version>
         </dependency>
-
-        <!-- OXM Dependency -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-oxm</artifactId>
         </dependency>
-
-        <!-- Database Dependencies -->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
@@ -45,40 +40,32 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
-
-        <!-- Lombok Dependency -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Spring Boot Configuration Processor -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
-
-        <!-- Shared Library Module -->
-        <dependency>
-            <groupId>ai.dataanalytic</groupId>
-            <artifactId>shared-library</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-
-        <!-- Spring Batch Test Dependency -->
         <dependency>
             <groupId>org.springframework.batch</groupId>
             <artifactId>spring-batch-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <!-- Spring Boot Starter Test -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
         </dependency>
 
         <dependency>
@@ -93,7 +80,6 @@
         </dependency>
 
     </dependencies>
-
     <build>
         <plugins>
             <plugin>
