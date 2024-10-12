@@ -1,9 +1,10 @@
 package ai.dataanalytic.querybridge.service;
 
-import ai.dataanalytic.querybridge.config.DataSourceContextService;
 import ai.dataanalytic.querybridge.config.DataSourceConnectionManager;
-import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
+import ai.dataanalytic.querybridge.config.DataSourceContextService;
 import ai.dataanalytic.querybridge.dto.DynamicTableData;
+import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
+import ai.dataanalytic.sharedlibrary.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -42,10 +43,14 @@ public class DatabaseServiceImpl implements DatabaseService {
 
     private DatabaseConnectionRequest databaseConnectionRequest;
 
+    private static void verifyCredentials() {
+        log.error("Credentials must be set before calling this method.");
+    }
+
     @Override
     public ResponseEntity<String> setDatabaseConnection(DatabaseConnectionRequest databaseConnectionRequest) {
         // Validate the provided credentials
-        if (!validateCredentials(databaseConnectionRequest)) {
+        if (isMissingRequiredFields(databaseConnectionRequest)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid credentials provided");
         }
 
@@ -112,10 +117,6 @@ public class DatabaseServiceImpl implements DatabaseService {
             log.error("Error listing columns for table: {}", tableName, e);
             return handleException(e, "Error listing columns for table: ");
         }
-    }
-
-    private static void verifyCredentials() {
-        log.error("Credentials must be set before calling this method.");
     }
 
     @Override
@@ -215,12 +216,18 @@ public class DatabaseServiceImpl implements DatabaseService {
     /**
      * Validates the provided database credentials.
      *
-     * @param databaseConnectionRequest The database credentials.
+     * @param request The database credentials.
      * @return True if the credentials are valid, false otherwise.
      */
-    private boolean validateCredentials(DatabaseConnectionRequest databaseConnectionRequest) {
-        return databaseConnectionRequest.getDatabaseName() != null && !databaseConnectionRequest.getDatabaseName().isEmpty() && databaseConnectionRequest.getHost() != null && !databaseConnectionRequest.getHost().isEmpty() && databaseConnectionRequest.getUserName() != null && !databaseConnectionRequest.getUserName().isEmpty() && databaseConnectionRequest.getPassword() != null && !databaseConnectionRequest.getPassword().isEmpty();
+    private boolean isMissingRequiredFields(DatabaseConnectionRequest request) {
+        return StringUtils.hasNullOrEmptyFields(
+                request.getDatabaseName(),
+                request.getHost(),
+                request.getUserName(),
+                request.getPassword()
+        );
     }
+
 
     /**
      * Handles exceptions based on the active environment.
