@@ -1,4 +1,4 @@
-package ai.dataanalytic.querybridge.config;
+package ai.dataanalytic.sharedlibrary.datasource.database;
 
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import com.zaxxer.hikari.HikariConfig;

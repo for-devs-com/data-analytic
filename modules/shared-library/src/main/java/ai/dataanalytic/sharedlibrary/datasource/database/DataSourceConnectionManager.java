@@ -1,6 +1,6 @@
-package ai.dataanalytic.querybridge.config;
+package ai.dataanalytic.sharedlibrary.datasource.database;
 
-import ai.dataanalytic.querybridge.utils.ConnectionTester;
+
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;

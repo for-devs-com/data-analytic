@@ -1,6 +1,6 @@
 package ai.dataanalytic.querybridge.service;
 
-import ai.dataanalytic.querybridge.config.DataSourceConnectionManager;
+import ai.dataanalytic.sharedlibrary.datasource.database.DataSourceConnectionManager;
 import ai.dataanalytic.querybridge.dto.DynamicTableData;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import lombok.extern.slf4j.Slf4j;

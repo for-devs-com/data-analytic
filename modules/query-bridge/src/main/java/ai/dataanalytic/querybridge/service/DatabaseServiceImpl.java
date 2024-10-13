@@ -1,7 +1,7 @@
 package ai.dataanalytic.querybridge.service;
 
-import ai.dataanalytic.querybridge.config.DataSourceConnectionManager;
-import ai.dataanalytic.querybridge.config.DataSourceContextService;
+import ai.dataanalytic.sharedlibrary.datasource.database.DataSourceConnectionManager;
+import ai.dataanalytic.sharedlibrary.datasource.database.DataSourceContextService;
 import ai.dataanalytic.querybridge.dto.DynamicTableData;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import ai.dataanalytic.sharedlibrary.util.StringUtils;
