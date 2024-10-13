@@ -41,27 +41,36 @@ public class DatabaseServiceImpl implements DatabaseService {
 
     @Override
     public ResponseEntity<String> setDatabaseConnection(DatabaseConnectionRequest databaseConnectionRequest) {
-        if (isMissingRequiredFields(databaseConnectionRequest)) {
+        if (allConnectionFieldsPresent(databaseConnectionRequest)) {
+            try {
+                if (dataSourceConnectionManager.createAndTestConnection(databaseConnectionRequest)) {
+                    this.databaseConnectionRequest = databaseConnectionRequest;
+                    String dataSourceKey = dataSourceConnectionManager.generateHashKey(databaseConnectionRequest);
+                    dataSourceConnectionManager.getJdbcTemplateForDb(databaseConnectionRequest.getDatabaseType().toLowerCase(), dataSourceKey);
+
+                    log.info("Connected successfully to database: {}", databaseConnectionRequest.getDatabaseName());
+                    return ResponseEntity.ok("Connected successfully to database: " + databaseConnectionRequest.getDatabaseName());
+                } else {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to connect to database: " + databaseConnectionRequest.getDatabaseName());
+                }
+            } catch (Exception e) {
+                log.error("Error connecting to the database", e);
+                return handleExceptionAsString(e);
+            }
+        } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid credentials provided");
         }
-
-        this.databaseConnectionRequest = databaseConnectionRequest;
-
-        try {
-            if (!dataSourceConnectionManager.createAndTestConnection(databaseConnectionRequest)) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to connect to database: " + databaseConnectionRequest.getDatabaseName());
-            }
-
-            String dataSourceKey = dataSourceConnectionManager.generateHashKey(databaseConnectionRequest);
-            JdbcTemplate jdbcTemplate = dataSourceConnectionManager.getJdbcTemplateForDb(databaseConnectionRequest.getDatabaseType().toLowerCase(), dataSourceKey);
-
-            log.info("Connected successfully to database: {}", databaseConnectionRequest.getDatabaseName());
-            return ResponseEntity.ok("Connected successfully to database: " + databaseConnectionRequest.getDatabaseName());
-        } catch (Exception e) {
-            log.error("Error connecting to the database", e);
-            return handleExceptionAsString(e);
-        }
     }
+
+    private boolean allConnectionFieldsPresent(DatabaseConnectionRequest request) {
+        return StringUtils.allFieldsPresent(
+                request.getDatabaseName(),
+                request.getHost(),
+                request.getUserName(),
+                request.getPassword()
+        );
+    }
+
 
     @Override
     public ResponseEntity<List<String>> listTables() {
@@ -161,15 +170,6 @@ public class DatabaseServiceImpl implements DatabaseService {
     private boolean isValidQuery(String query) {
         String sqlPattern = "^[a-zA-Z0-9_\\s,=*'();]*$";
         return Pattern.matches(sqlPattern, query);
-    }
-
-    private boolean isMissingRequiredFields(DatabaseConnectionRequest request) {
-        return StringUtils.hasNullOrEmptyFields(
-                request.getDatabaseName(),
-                request.getHost(),
-                request.getUserName(),
-                request.getPassword()
-        );
     }
 
     private ResponseEntity<List<Map<String, Object>>> handleExceptionAsListMap(Exception e, String message) {
