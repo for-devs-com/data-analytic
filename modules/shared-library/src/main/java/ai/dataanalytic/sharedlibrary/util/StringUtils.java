@@ -1,16 +1,22 @@
 package ai.dataanalytic.sharedlibrary.util;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class StringUtils {
 
-    // Private constructor to prevent instantiation
     private StringUtils() {}
 
-    public static boolean hasNullOrEmptyFields(String... fields) {
+    public static boolean allFieldsPresent(String... fields) {
         for (String field : fields) {
             if (field == null || field.isEmpty()) {
-                return true;
+                log.warn("Field is either null or empty.");
+                return false;
             }
         }
-        return false;
+        log.info("All fields are present and non-empty.");
+        return true;
     }
 }
+
+
