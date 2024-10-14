@@ -1,4 +1,4 @@
-package ai.dataanalytic.querybridge.service;
+package ai.dataanalytic.sharedlibrary.service;
 
 
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;

@@ -1,4 +1,4 @@
-package ai.dataanalytic.querybridge.config;
+package ai.dataanalytic.sharedlibrary.config;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,12 +11,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Handles all exceptions and provides a generic error response.
-     *
-     * @param e the exception
-     * @return ResponseEntity with an error message and status code
-     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleException(Exception e) {
         // Log the error and return a generic error response

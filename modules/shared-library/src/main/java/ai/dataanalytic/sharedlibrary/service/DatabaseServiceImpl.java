@@ -1,6 +1,6 @@
-package ai.dataanalytic.querybridge.service;
+package ai.dataanalytic.sharedlibrary.service;
 
-import ai.dataanalytic.querybridge.dto.DynamicTableData;
+import ai.dataanalytic.sharedlibrary.dto.DynamicTableData;
 import ai.dataanalytic.sharedlibrary.datasource.database.DataSourceConnectionManager;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import ai.dataanalytic.sharedlibrary.util.StringUtils;

@@ -1,4 +1,4 @@
-package ai.dataanalytic.querybridge.dto;
+package ai.dataanalytic.sharedlibrary.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

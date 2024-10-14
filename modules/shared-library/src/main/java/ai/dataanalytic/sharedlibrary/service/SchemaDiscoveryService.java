@@ -1,7 +1,7 @@
-package ai.dataanalytic.querybridge.service;
+package ai.dataanalytic.sharedlibrary.service;
 
 import ai.dataanalytic.sharedlibrary.datasource.database.DataSourceConnectionManager;
-import ai.dataanalytic.querybridge.dto.DynamicTableData;
+import ai.dataanalytic.sharedlibrary.dto.DynamicTableData;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
