@@ -2,6 +2,7 @@ package ai.dataanalytic.querybridge.controller;
 
 import ai.dataanalytic.querybridge.service.DatabaseService;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -14,43 +15,51 @@ import java.util.Map;
  * Controller for handling database navigation requests.
  */
 @Slf4j
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
 @RequestMapping("/query/bridge/database")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class DatabaseNavigatorController {
 
     @Autowired
     private DatabaseService databaseService;
+
     /**
      * Connects to the database using dynamic data sources.
      *
      * @param databaseConnectionRequest The database credentials provided in the request body.
+     * @param session                   The HTTP session.
      * @return ResponseEntity with connection status.
      */
     @PostMapping("/connect")
-    public ResponseEntity<String> setDatabaseConnection(@RequestBody DatabaseConnectionRequest databaseConnectionRequest) {
-        return databaseService.setDatabaseConnection(databaseConnectionRequest);
+    public ResponseEntity<String> setDatabaseConnection(
+            @RequestBody DatabaseConnectionRequest databaseConnectionRequest,
+            HttpSession session) {
+        return databaseService.setDatabaseConnection(databaseConnectionRequest, session);
     }
 
     /**
      * Lists the tables in the database.
      *
+     * @param session The HTTP session.
      * @return ResponseEntity with the list of tables.
      */
     @GetMapping("/listTables")
-    public ResponseEntity<List<String>> listTables() {
-        return databaseService.listTables();
+    public ResponseEntity<List<String>> listTables(HttpSession session) {
+        return databaseService.listTables(session);
     }
 
     /**
      * Lists the columns of a table.
      *
      * @param tableName The name of the table.
+     * @param session   The HTTP session.
      * @return ResponseEntity with the list of columns.
      */
     @GetMapping("/columns/{tableName}")
-    public ResponseEntity<List<Map<String, Object>>> listColumns(@PathVariable String tableName) {
-        return databaseService.listColumns(tableName);
+    public ResponseEntity<List<Map<String, Object>>> listColumns(
+            @PathVariable String tableName,
+            HttpSession session) {
+        return databaseService.listColumns(tableName, session);
     }
 
     /**
@@ -59,24 +68,15 @@ public class DatabaseNavigatorController {
      * @param tableName The name of the table.
      * @param page      The page number.
      * @param size      The number of rows per page.
+     * @param session   The HTTP session.
      * @return ResponseEntity with the table data.
      */
     @GetMapping("/data/{tableName}")
     public ResponseEntity<Map<String, Object>> getTableData(
             @PathVariable("tableName") String tableName,
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "10") int size) {
-        return databaseService.getTableData(tableName, page, size);
-    }
-
-    /**
-     * Executes a SQL query.
-     *
-     * @param query The SQL query to be executed.
-     * @return ResponseEntity with the query result.
-     */
-    @PostMapping("/execute/query")
-    public ResponseEntity<List<Map<String, Object>>> executeQuery(@RequestBody String query) {
-        return databaseService.executeQuery(query);
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            HttpSession session) {
+        return databaseService.getTableData(tableName, page, size, session);
     }
 }

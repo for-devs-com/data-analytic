@@ -15,46 +15,44 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service class to manage dynamic data sources.
- * It provides methods to create and test connections, cache data sources, and handle JdbcTemplate instances.
  */
 @Slf4j
 @Service
 public class DynamicDataSourceManager {
 
-    // Cache to store JdbcTemplate instances by their key
+    // Cache to store JdbcTemplate instances by session ID
     private final Map<String, JdbcTemplate> dataSourceCache = new ConcurrentHashMap<>();
 
-    // Database drivers and URLs
-    private static final Map<String, String> DRIVER_MAP = new HashMap<>();
-    static {
-        DRIVER_MAP.put("postgresql", "org.postgresql.Driver");
-        DRIVER_MAP.put("mysql", "com.mysql.cj.jdbc.Driver");
-        DRIVER_MAP.put("mariadb", "org.mariadb.jdbc.Driver");
-        DRIVER_MAP.put("sqlserver", "com.microsoft.sqlserver.jdbc.SQLServerDriver");
-        DRIVER_MAP.put("oracle", "oracle.jdbc.OracleDriver");
-        DRIVER_MAP.put("db2", "com.ibm.db2.jcc.DB2Driver");
-        DRIVER_MAP.put("mongodb", "mongodb.jdbc.MongoDriver");
-        // Agregar más entradas según sea necesario
-    }
+    // Database drivers
+    private static final Map<String, String> DRIVER_MAP = Map.of(
+            "postgresql", "org.postgresql.Driver",
+            "mysql", "com.mysql.cj.jdbc.Driver",
+            "mariadb", "org.mariadb.jdbc.Driver",
+            "sqlserver", "com.microsoft.sqlserver.jdbc.SQLServerDriver",
+            "oracle", "oracle.jdbc.OracleDriver"
+            // Add more entries as needed
+    );
+
     /**
      * Creates and tests a new database connection using the provided credentials.
      *
      * @param credentials the database credentials
-     * @return true if the connection is successful, false otherwise
+     * @return JdbcTemplate if the connection is successful, null otherwise
      */
-    public boolean createAndTestConnection(DatabaseConnectionRequest credentials) {
-        String key = generateKeyForUserDataSource(credentials);
-        JdbcTemplate jdbcTemplate = dataSourceCache.computeIfAbsent(key, k -> {
+    public JdbcTemplate createAndTestConnection(DatabaseConnectionRequest credentials) {
+        try {
             DataSource dataSource = createDataSource(credentials);
-            return new JdbcTemplate(dataSource);
-        });
+            JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
 
-        if (testConnection(jdbcTemplate)) {
-            DataSourceContextService.setCurrentTemplate(jdbcTemplate);
-            return true;
-        } else {
-            closeDataSource(key);
-            return false;
+            if (testConnection(jdbcTemplate)) {
+                return jdbcTemplate;
+            } else {
+                closeDataSource(dataSource);
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("Error creating and testing connection", e);
+            return null;
         }
     }
 
@@ -70,19 +68,8 @@ public class DynamicDataSourceManager {
             return true;
         } catch (Exception e) {
             log.error("Error testing connection", e);
-            DataSourceContextService.clear();
             return false;
         }
-    }
-
-    /**
-     * Gets the JdbcTemplate for the specified database key.
-     *
-     * @param key the key for the database
-     * @return the JdbcTemplate, or the current context template if not found
-     */
-    public JdbcTemplate getJdbcTemplateForDb(String key) {
-        return dataSourceCache.getOrDefault(key, DataSourceContextService.getCurrentTemplate());
     }
 
     /**
@@ -100,46 +87,57 @@ public class DynamicDataSourceManager {
             throw new IllegalArgumentException("Unsupported database type: " + credentials.getDatabaseType());
         }
         hikariConfig.setDriverClassName(driverClassName);
-        hikariConfig.setJdbcUrl("jdbc:" + credentials.getDatabaseType() + "://" + credentials.getHost() + ":" + credentials.getPort() + "/" + credentials.getDatabaseName());
+
+        // Build the JDBC URL based on the database type
+        String jdbcUrl = buildJdbcUrl(credentials);
+        hikariConfig.setJdbcUrl(jdbcUrl);
+
         hikariConfig.setUsername(credentials.getUserName());
         hikariConfig.setPassword(credentials.getPassword());
+
+        // Optional: Configure pool settings
+        hikariConfig.setMaximumPoolSize(10);
+        hikariConfig.setConnectionTimeout(30000);
+
         return new HikariDataSource(hikariConfig);
     }
 
     /**
-     * Generates a unique key based on the database credentials.
+     * Builds the JDBC URL based on the database type and credentials.
      *
      * @param credentials the database credentials
-     * @return the generated key
+     * @return the JDBC URL
      */
-    private String generateKeyForUserDataSource(DatabaseConnectionRequest credentials) {
-        // TODO: Implement a better key generation
-        return credentials.getDatabaseType() + "-" + credentials.getHost() + "-" + credentials.getPort() + "-" + credentials.getDatabaseName() + "-" + credentials.getUserName() + "-" + credentials.getPassword();
-    }
+    private String buildJdbcUrl(DatabaseConnectionRequest credentials) {
+        String databaseType = credentials.getDatabaseType().toLowerCase();
+        String host = credentials.getHost();
+        int port = credentials.getPort();
+        String databaseName = credentials.getDatabaseName();
 
-    /**
-     * Closes the data source for the specified key.
-     *
-     * @param key the key for the data source to close
-     */
-    public void closeDataSource(String key) {
-        JdbcTemplate jdbcTemplate = dataSourceCache.remove(key);
-        DataSourceContextService.clear();
-        if (jdbcTemplate != null) {
-            DataSource dataSource = jdbcTemplate.getDataSource();
-            if (dataSource instanceof HikariDataSource) {
-                ((HikariDataSource) dataSource).close();
-            }
+        switch (databaseType) {
+            case "postgresql":
+                return String.format("jdbc:postgresql://%s:%d/%s", host, port, databaseName);
+            case "mysql":
+                return String.format("jdbc:mysql://%s:%d/%s", host, port, databaseName);
+            case "sqlserver":
+                return String.format("jdbc:sqlserver://%s:%d;databaseName=%s", host, port, databaseName);
+            case "oracle":
+                // For Oracle, additional parameters like SID or service name might be needed
+                return String.format("jdbc:oracle:thin:@%s:%d:%s", host, port, credentials.getSid());
+            // Add more cases as needed
+            default:
+                throw new IllegalArgumentException("Unsupported database type: " + databaseType);
         }
     }
 
     /**
-     * Generates a key for the given database credentials.
+     * Closes the data source.
      *
-     * @param credentials the database credentials
-     * @return the generated key
+     * @param dataSource the data source to close
      */
-    public String getKey(DatabaseConnectionRequest credentials) {
-        return generateKeyForUserDataSource(credentials);
+    private void closeDataSource(DataSource dataSource) {
+        if (dataSource instanceof HikariDataSource) {
+            ((HikariDataSource) dataSource).close();
+        }
     }
 }

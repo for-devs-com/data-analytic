@@ -1,9 +1,9 @@
 package ai.dataanalytic.querybridge.service;
 
-import ai.dataanalytic.querybridge.config.DataSourceContextService;
 import ai.dataanalytic.querybridge.config.DynamicDataSourceManager;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import ai.dataanalytic.querybridge.dto.DynamicTableData;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /**
@@ -32,100 +33,114 @@ public class DatabaseServiceImpl implements DatabaseService {
     private DynamicDataSourceManager dynamicDataSourceManager;
 
     @Autowired
-    private DataSourceContextService dataSourceContextService;
-
-    @Autowired
     private SchemaDiscoveryService schemaDiscoveryService;
 
     @Autowired
     private Environment environment;
 
-    private DatabaseConnectionRequest databaseConnectionRequest;
+    private static final String SESSION_ATTRIBUTE_CONNECTION = "dbConnection";
 
     @Override
-    public ResponseEntity<String> setDatabaseConnection(DatabaseConnectionRequest databaseConnectionRequest) {
+    public ResponseEntity<String> setDatabaseConnection(DatabaseConnectionRequest databaseConnectionRequest, HttpSession session) {
         // Validate the provided credentials
         if (!validateCredentials(databaseConnectionRequest)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid credentials provided");
         }
 
-        this.databaseConnectionRequest = databaseConnectionRequest; // Store the credentials for future use
-
         try {
             // Try to create and test a database connection with the provided credentials.
-            // The createAndTestConnection method returns true if the connection is successful.
-            // The '!' operator inverts the result, so this condition is true if the connection fails.
-            if (!dynamicDataSourceManager.createAndTestConnection(databaseConnectionRequest)) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to connect to database: " + databaseConnectionRequest.getDatabaseName());
+            JdbcTemplate jdbcTemplate = dynamicDataSourceManager.createAndTestConnection(databaseConnectionRequest);
+
+            String userId = getUserIdFromSession(session);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
             }
 
-            // Retrieve the key for the DataSource
-            String dataSourceKey = dynamicDataSourceManager.getKey(databaseConnectionRequest);
-            // Retrieve the JdbcTemplate for the database
-            JdbcTemplate jdbcTemplate = dynamicDataSourceManager.getJdbcTemplateForDb(dataSourceKey);
-            // Set the current JdbcTemplate in the data source context
-            DataSourceContextService.setCurrentTemplate(jdbcTemplate);
+            if (jdbcTemplate == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to connect to database");
+            }
+
+            // Store the JdbcTemplate in a map keyed by userId
+            userConnections.put(userId, jdbcTemplate);
+
+            // Store the JdbcTemplate in the session
+            session.setAttribute(SESSION_ATTRIBUTE_CONNECTION, jdbcTemplate);
+
             return ResponseEntity.ok("Connected successfully to database: " + databaseConnectionRequest.getDatabaseName());
         } catch (Exception e) {
             log.error("Error connecting to the database", e);
-            return handleException(e, "Error connecting to the database: ");
+            return handleException(e, "Error connecting to the database.");
         }
     }
 
+    private String getUserIdFromSession(HttpSession session) {
+        return (String) session.getAttribute("userId");
+    }
+
+
+
+    // Mapa para almacenar las conexiones por userId
+    private final Map<String, JdbcTemplate> userConnections = new ConcurrentHashMap<>();
+
     @Override
-    public ResponseEntity<List<String>> listTables() {
-        // Check if credentials are set
-        if (this.databaseConnectionRequest == null) {
-            log.error("Credentials must be set before calling this method.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    public ResponseEntity<List<String>> listTables(HttpSession session) {
+        JdbcTemplate jdbcTemplate = getJdbcTemplateFromSession(session);
+        if (jdbcTemplate == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
 
         try {
             // Get the list of tables in the database
-            List<String> tables = schemaDiscoveryService.listTables(this.databaseConnectionRequest);
-            log.info("Tables: {}", tables);
+            List<String> tables = schemaDiscoveryService.listTables(jdbcTemplate);
             return ResponseEntity.ok(tables);
         } catch (Exception e) {
             log.error("Error listing tables", e);
-            return handleException(e, "Error listing tables: ");
+            return handleException(e, "Error listing tables.");
         }
     }
 
     @Override
-    public ResponseEntity<List<Map<String, Object>>> listColumns(String tableName) {
-        // Check if credentials are set
-        if (this.databaseConnectionRequest == null) {
-            log.error("Credentials must be set before calling this method.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    public ResponseEntity<List<Map<String, Object>>> listColumns(String tableName, HttpSession session) {
+        JdbcTemplate jdbcTemplate = getJdbcTemplateFromSession(session);
+        if (jdbcTemplate == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
 
         try {
-            // Retrieve the key for the DataSource
-            String dataSourceKey = dynamicDataSourceManager.getKey(this.databaseConnectionRequest);
+            // Validate table name
+            if (!isValidIdentifier(tableName)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            }
+
             // Get the list of columns in the specified table
-            List<Map<String, Object>> columns = schemaDiscoveryService.listColumns(tableName, dataSourceKey);
+            List<Map<String, Object>> columns = schemaDiscoveryService.listColumns(tableName, jdbcTemplate);
             return ResponseEntity.ok(columns);
-        } catch (SQLException e) {
-            log.error("SQL error listing columns for table: {}", tableName, e);
-            return handleException(e, "SQL error listing columns for table: ");
         } catch (Exception e) {
             log.error("Error listing columns for table: {}", tableName, e);
-            return handleException(e, "Error listing columns for table: ");
+            return handleException(e, "Error listing columns for table.");
         }
     }
 
     @Override
-    public ResponseEntity<Map<String, Object>> getTableData(String tableName, int page, int size) {
-        // Check if credentials are set
-        if (this.databaseConnectionRequest == null) {
-            log.error("Credentials must be set before calling this method.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    public ResponseEntity<Map<String, Object>> getTableData(String tableName, int page, int size, HttpSession session) {
+        JdbcTemplate jdbcTemplate = getJdbcTemplateFromSession(session);
+        if (jdbcTemplate == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
 
         try {
+            // Validate table name
+            if (!isValidIdentifier(tableName)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            }
+
             // Retrieve table data with pagination
-            ResponseEntity<DynamicTableData> responseEntity = schemaDiscoveryService.getTableDataWithPagination(tableName, this.databaseConnectionRequest, page, size);
+            ResponseEntity<DynamicTableData> responseEntity = schemaDiscoveryService.getTableDataWithPagination(tableName, jdbcTemplate, page, size);
             DynamicTableData tableData = responseEntity.getBody();
+
+            if (tableData == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
 
             // Create a response map that includes the data and pagination information
             Map<String, Object> response = new HashMap<>();
@@ -136,77 +151,26 @@ public class DatabaseServiceImpl implements DatabaseService {
             response.put("totalRows", tableData.getTotalRows());
             response.put("tableName", tableName);
 
-            log.info("Table Response Data: {}", response);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error obtaining data from table: {}", tableName, e);
-            return handleException(e, "Error obtaining data from table: ");
+            return handleException(e, "Error obtaining data from table.");
         }
     }
 
-    @Override
-    public ResponseEntity<List<Map<String, Object>>> executeQuery(String query) {
-        // Check if credentials are set
-        // If the database credentials are not set, log an error and return an INTERNAL_SERVER_ERROR response.
-        if (this.databaseConnectionRequest == null) {
-            log.error("Credentials must be set before calling this method.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    // Helper method to get JdbcTemplate from session
+   /* private JdbcTemplate getJdbcTemplateFromSession(HttpSession session) {
+        return (JdbcTemplate) session.getAttribute(SESSION_ATTRIBUTE_CONNECTION);
+    }*/
+    private JdbcTemplate getJdbcTemplateFromSession(HttpSession session) {
+        String userId = getUserIdFromSession(session);
+        if (userId == null) {
+            return null;
         }
-
-        // Input validation
-        // Validate the SQL query to prevent SQL injection.
-        if (!isValidQuery(query)) {
-            log.error("Invalid SQL query: {}", query);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        }
-
-        try {
-            // Log the query to be executed
-            // This helps in debugging by logging the exact query being executed.
-            log.info("Executing query: {}", query);
-
-            // Retrieve the key for the DataSource
-            // Get the unique key for the current database credentials.
-            String dataSourceKey = dynamicDataSourceManager.getKey(this.databaseConnectionRequest);
-
-            // Retrieve the JdbcTemplate for the database
-            // Get the JdbcTemplate instance for the specified dataSourceKey.
-            JdbcTemplate jdbcTemplate = dynamicDataSourceManager.getJdbcTemplateForDb(dataSourceKey);
-
-            // Execute the query and get the result
-            // Use the JdbcTemplate to execute the SQL query and retrieve the result as a list of maps (each map represents a row).
-            List<Map<String, Object>> result = jdbcTemplate.query(
-                    conn -> conn.prepareStatement(query), // Create a prepared statement for the SQL query to prevent SQL injection
-                    new ColumnMapRowMapper() // Map each row of the result set to a map with column names as keys
-            );
-
-            // Log the result size for debugging
-            // This helps in understanding the amount of data returned by the query.
-            log.info("Query executed successfully. Result size: {}", result.size());
-
-            // Return the result in an OK response
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            // Log the detailed error message for exceptions
-            // This provides detailed error information to help diagnose issues.
-            log.error("Error executing query: {}. Error: {}", query, e.getMessage(), e);
-            return handleException(e, "Error executing query: ");
-        }
+        return userConnections.get(userId);
     }
 
-    /**
-     * Validates the SQL query to prevent SQL injection.
-     *
-     * @param query The SQL query to validate.
-     * @return True if the query is valid, false otherwise.
-     */
-    private boolean isValidQuery(String query) {
-        // Relaxed validation to prevent SQL injection
-        // This pattern allows a wider range of valid SQL syntax, including letters, numbers, underscores,
-        // whitespace, commas, equals signs, asterisks, single quotes, parentheses, and semicolons.
-        String sqlPattern = "^[a-zA-Z0-9_\\s,=*'();]*$";
-        return Pattern.matches(sqlPattern, query);
-    }
+
 
     /**
      * Validates the provided database credentials.
@@ -215,7 +179,20 @@ public class DatabaseServiceImpl implements DatabaseService {
      * @return True if the credentials are valid, false otherwise.
      */
     private boolean validateCredentials(DatabaseConnectionRequest databaseConnectionRequest) {
-        return databaseConnectionRequest.getDatabaseName() != null && !databaseConnectionRequest.getDatabaseName().isEmpty() && databaseConnectionRequest.getHost() != null && !databaseConnectionRequest.getHost().isEmpty() && databaseConnectionRequest.getUserName() != null && !databaseConnectionRequest.getUserName().isEmpty() && databaseConnectionRequest.getPassword() != null && !databaseConnectionRequest.getPassword().isEmpty();
+        return databaseConnectionRequest.getDatabaseName() != null && !databaseConnectionRequest.getDatabaseName().isEmpty()
+                && databaseConnectionRequest.getHost() != null && !databaseConnectionRequest.getHost().isEmpty()
+                && databaseConnectionRequest.getUserName() != null && !databaseConnectionRequest.getUserName().isEmpty()
+                && databaseConnectionRequest.getPassword() != null && !databaseConnectionRequest.getPassword().isEmpty();
+    }
+
+    /**
+     * Validates identifiers like table names to prevent SQL injection.
+     *
+     * @param identifier The identifier to validate.
+     * @return True if the identifier is valid, false otherwise.
+     */
+    private boolean isValidIdentifier(String identifier) {
+        return identifier != null && identifier.matches("^[a-zA-Z0-9_]+$");
     }
 
     /**
@@ -226,10 +203,7 @@ public class DatabaseServiceImpl implements DatabaseService {
      * @return ResponseEntity with the appropriate error message.
      */
     private <T> ResponseEntity<T> handleException(Exception e, String message) {
-        if ("prod".equals(environment.getProperty("spring.profiles.active"))) {
-            return (ResponseEntity<T>) ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyMap());
-        } else {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body((T) (message + e.getMessage()));
-        }
+        log.error(message, e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
     }
 }
