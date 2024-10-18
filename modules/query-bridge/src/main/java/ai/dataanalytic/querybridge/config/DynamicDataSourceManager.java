@@ -9,7 +9,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,10 +26,7 @@ public class DynamicDataSourceManager {
     private static final Map<String, String> DRIVER_MAP = Map.of(
             "postgresql", "org.postgresql.Driver",
             "mysql", "com.mysql.cj.jdbc.Driver",
-            "mariadb", "org.mariadb.jdbc.Driver",
-            "sqlserver", "com.microsoft.sqlserver.jdbc.SQLServerDriver",
-            "oracle", "oracle.jdbc.OracleDriver"
-            // Add more entries as needed
+            "mongodb", "org.mongodb.driver"
     );
 
     /**
