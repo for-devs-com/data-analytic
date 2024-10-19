@@ -1,6 +1,6 @@
 package ai.dataanalytic.querybridge.service;
 
-import ai.dataanalytic.sharedlibrary.datasource.database.DataSourceConnectionManager;
+import ai.dataanalytic.querybridge.config.DynamicDataSourceManager;
 import ai.dataanalytic.querybridge.dto.DynamicTableData;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -23,28 +23,16 @@ import java.util.Map;
 @Slf4j
 public class SchemaDiscoveryService {
 
-    private final DataSourceConnectionManager dataSourceManager;
-
-    public SchemaDiscoveryService(DataSourceConnectionManager dataSourceManager) {
-        this.dataSourceManager = dataSourceManager;
-    }
-
-    public List<String> listTables(DatabaseConnectionRequest credentials) throws DataAccessException, SQLException {
-        String databaseType = credentials.getDatabaseType().toLowerCase();
-        String key = dataSourceManager.generateHashKey(credentials);
-        log.debug("Retrieving list of tables for database type: {}, key: {}", databaseType, key);
-
-        JdbcTemplate jdbcTemplate = dataSourceManager.getJdbcTemplateForDb(databaseType, key);
-        if (jdbcTemplate == null) {
-            log.error("JdbcTemplate not found for key: {}", key);
-            throw new SQLException("Unable to obtain JdbcTemplate for given credentials.");
-        }
-
+    /**
+     * Obtiene la lista de tablas de la base de datos y la devuelve como una lista de cadenas de texto
+     * con el nombre de las tablas encontradas en la base de datos.
+     */
+    public List<String> listTables(JdbcTemplate jdbcTemplate) throws SQLException {
         return jdbcTemplate.execute((Connection con) -> {
             List<String> tableList = new ArrayList<>();
             DatabaseMetaData metaData = con.getMetaData();
-            log.debug("Querying tables from database metadata");
-            try (ResultSet rs = metaData.getTables(null, "public", "%", new String[]{"TABLE"})) {
+            String[] types = {"TABLE"};
+            try (ResultSet rs = metaData.getTables(null, null, "%", types)) {
                 while (rs.next()) {
                     tableList.add(rs.getString("TABLE_NAME"));
                 }
@@ -53,19 +41,14 @@ public class SchemaDiscoveryService {
         });
     }
 
-    public List<Map<String, Object>> listColumns(String tableName, String databaseType, String credentialsKey) throws SQLException {
-        log.debug("Retrieving columns for table: {}, database type: {}, key: {}", tableName, databaseType, credentialsKey);
-
-        JdbcTemplate jdbcTemplate = dataSourceManager.getJdbcTemplateForDb(databaseType, credentialsKey);
-        if (jdbcTemplate == null) {
-            log.error("JdbcTemplate not found for key: {}", credentialsKey);
-            throw new SQLException("Unable to obtain JdbcTemplate for key: " + credentialsKey);
-        }
-
+    /**
+     * Obtiene la lista de columnas de una tabla en la base de datos y la devuelve como una lista de mapas
+     * con el nombre de la columna, el tipo de dato y el tamaño de la columna.
+     */
+    public List<Map<String, Object>> listColumns(String tableName, JdbcTemplate jdbcTemplate) throws SQLException {
         return jdbcTemplate.execute((Connection con) -> {
             List<Map<String, Object>> columnList = new ArrayList<>();
             DatabaseMetaData metaData = con.getMetaData();
-            log.debug("Querying columns from database metadata for table: {}", tableName);
             try (ResultSet rs = metaData.getColumns(null, null, tableName, "%")) {
                 while (rs.next()) {
                     Map<String, Object> column = new HashMap<>();
@@ -79,21 +62,26 @@ public class SchemaDiscoveryService {
         });
     }
 
-    public ResponseEntity<DynamicTableData> getTableDataWithPagination(String tableName, DatabaseConnectionRequest credentials, int page, int size) throws SQLException {
+    /**
+     * Obtiene los datos de una tabla con paginación y el conteo total de filas.
+     */
+    public ResponseEntity<DynamicTableData> getTableDataWithPagination(String tableName, JdbcTemplate jdbcTemplate, int page, int size) {
         try {
-            String databaseType = credentials.getDatabaseType().toLowerCase();
-            String key = dataSourceManager.generateHashKey(credentials);
-            log.debug("Retrieving table data with pagination for table: {}, page: {}, size: {}, database type: {}, key: {}", tableName, page, size, databaseType, key);
-
-            JdbcTemplate jdbcTemplate = dataSourceManager.getJdbcTemplateForDb(databaseType, key);
-            if (jdbcTemplate == null) {
-                log.error("JdbcTemplate not found for key: {}", key);
-                throw new SQLException("Unable to obtain JdbcTemplate for key: " + key);
+            // Validar y sanitizar el nombre de la tabla
+            if (!isValidIdentifier(tableName)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
 
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM " + tableName + " LIMIT ? OFFSET ?", size, page * size);
-            List<Map<String, Object>> columns = listColumns(tableName, databaseType, key);
-            int totalRows = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + tableName, Integer.class);
+            // Obtener el total de filas
+            String countSql = "SELECT COUNT(*) FROM " + tableName;
+            int totalRows = jdbcTemplate.queryForObject(countSql, Integer.class);
+
+            // Obtener las filas con paginación
+            String dataSql = "SELECT * FROM " + tableName + " LIMIT ? OFFSET ?";
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(dataSql, size, page * size);
+
+            // Obtener las columnas
+            List<Map<String, Object>> columns = listColumns(tableName, jdbcTemplate);
 
             DynamicTableData response = new DynamicTableData();
             response.setRows(rows);
@@ -103,11 +91,20 @@ public class SchemaDiscoveryService {
             response.setPageSize(size);
             response.setCurrentPage(page);
 
-            log.info("Retrieved {} rows for table: {}, page: {}", rows.size(), tableName, page);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error retrieving table data for table: {}", tableName, e);
+            log.error("Error obtaining data from table: " + tableName, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
+    }
+
+    /**
+     * Validates identifiers like table names to prevent SQL injection.
+     *
+     * @param identifier The identifier to validate.
+     * @return True if the identifier is valid, false otherwise.
+     */
+    private boolean isValidIdentifier(String identifier) {
+        return identifier != null && identifier.matches("^[a-zA-Z0-9_]+$");
     }
 }

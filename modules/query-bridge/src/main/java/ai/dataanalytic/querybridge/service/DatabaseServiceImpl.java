@@ -1,9 +1,9 @@
 package ai.dataanalytic.querybridge.service;
 
-import ai.dataanalytic.querybridge.dto.DynamicTableData;
-import ai.dataanalytic.sharedlibrary.datasource.database.DataSourceConnectionManager;
+import ai.dataanalytic.querybridge.config.DynamicDataSourceManager;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
-import ai.dataanalytic.sharedlibrary.util.StringUtils;
+import ai.dataanalytic.querybridge.dto.DynamicTableData;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -18,14 +18,19 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+/**
+ * Implementation of the DatabaseService interface.
+ * This class handles the business logic for database operations.
+ */
 @Slf4j
 @Service
 public class DatabaseServiceImpl implements DatabaseService {
 
     @Autowired
-    private DataSourceConnectionManager dataSourceConnectionManager;
+    private DynamicDataSourceManager dynamicDataSourceManager;
 
     @Autowired
     private SchemaDiscoveryService schemaDiscoveryService;
@@ -33,84 +38,111 @@ public class DatabaseServiceImpl implements DatabaseService {
     @Autowired
     private Environment environment;
 
-    private DatabaseConnectionRequest databaseConnectionRequest;
-
-    private static void verifyCredentials() {
-        log.error("Credentials must be set before calling this method.");
-    }
+    private static final String SESSION_ATTRIBUTE_CONNECTION = "dbConnection";
 
     @Override
-    public ResponseEntity<String> setDatabaseConnection(DatabaseConnectionRequest databaseConnectionRequest) {
-        if (isMissingRequiredFields(databaseConnectionRequest)) {
+    public ResponseEntity<String> setDatabaseConnection(DatabaseConnectionRequest databaseConnectionRequest, HttpSession session) {
+        // Validate the provided credentials
+        if (!validateCredentials(databaseConnectionRequest)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid credentials provided");
         }
 
-        this.databaseConnectionRequest = databaseConnectionRequest;
-
         try {
-            if (!dataSourceConnectionManager.createAndTestConnection(databaseConnectionRequest)) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to connect to database: " + databaseConnectionRequest.getDatabaseName());
+            // Try to create and test a database connection with the provided credentials.
+            JdbcTemplate jdbcTemplate = dynamicDataSourceManager.createAndTestConnection(databaseConnectionRequest);
+
+            String userId = getUserIdFromSession(session);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
             }
 
-            String dataSourceKey = dataSourceConnectionManager.generateHashKey(databaseConnectionRequest);
-            JdbcTemplate jdbcTemplate = dataSourceConnectionManager.getJdbcTemplateForDb(databaseConnectionRequest.getDatabaseType().toLowerCase(), dataSourceKey);
+            if (jdbcTemplate == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to connect to database");
+            }
 
-            log.info("Connected successfully to database: {}", databaseConnectionRequest.getDatabaseName());
+            // Store the JdbcTemplate in a map keyed by userId
+            userConnections.put(userId, jdbcTemplate);
+
+            // Store the JdbcTemplate in the session
+            session.setAttribute(SESSION_ATTRIBUTE_CONNECTION, jdbcTemplate);
+
             return ResponseEntity.ok("Connected successfully to database: " + databaseConnectionRequest.getDatabaseName());
         } catch (Exception e) {
             log.error("Error connecting to the database", e);
-            return handleExceptionAsString(e);
+            return handleException(e, "Error connecting to the database.");
         }
     }
 
+    private String getUserIdFromSession(HttpSession session) {
+        return (String) session.getAttribute("userId");
+    }
+
+
+
+    // Mapa para almacenar las conexiones por userId
+    private final Map<String, JdbcTemplate> userConnections = new ConcurrentHashMap<>();
+
     @Override
-    public ResponseEntity<List<String>> listTables() {
-        if (this.databaseConnectionRequest == null) {
-            verifyCredentials();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    public ResponseEntity<List<String>> listTables(HttpSession session) {
+        JdbcTemplate jdbcTemplate = getJdbcTemplateFromSession(session);
+        if (jdbcTemplate == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
 
         try {
-            List<String> tables = schemaDiscoveryService.listTables(this.databaseConnectionRequest);
-            log.info("Tables: {}", tables);
+            // Get the list of tables in the database
+            List<String> tables = schemaDiscoveryService.listTables(jdbcTemplate);
             return ResponseEntity.ok(tables);
         } catch (Exception e) {
             log.error("Error listing tables", e);
-            return handleExceptionAsListString(e);
+            return handleException(e, "Error listing tables.");
         }
     }
 
     @Override
-    public ResponseEntity<List<Map<String, Object>>> listColumns(String tableName) {
-        if (this.databaseConnectionRequest == null) {
-            verifyCredentials();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    public ResponseEntity<List<Map<String, Object>>> listColumns(String tableName, HttpSession session) {
+        JdbcTemplate jdbcTemplate = getJdbcTemplateFromSession(session);
+        if (jdbcTemplate == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
 
         try {
-            String dataSourceKey = dataSourceConnectionManager.generateHashKey(this.databaseConnectionRequest);
-            List<Map<String, Object>> columns = schemaDiscoveryService.listColumns(tableName, this.databaseConnectionRequest.getDatabaseType().toLowerCase(), dataSourceKey);
+            // Validate table name
+            if (!isValidIdentifier(tableName)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            }
+
+            // Get the list of columns in the specified table
+            List<Map<String, Object>> columns = schemaDiscoveryService.listColumns(tableName, jdbcTemplate);
             return ResponseEntity.ok(columns);
-        } catch (SQLException e) {
-            log.error("SQL error listing columns for table: {}", tableName, e);
-            return handleExceptionAsListMap(e, "SQL error listing columns for table: ");
         } catch (Exception e) {
             log.error("Error listing columns for table: {}", tableName, e);
-            return handleExceptionAsListMap(e, "Error listing columns for table: ");
+            return handleException(e, "Error listing columns for table.");
         }
     }
 
     @Override
-    public ResponseEntity<Map<String, Object>> getTableData(String tableName, int page, int size) {
-        if (this.databaseConnectionRequest == null) {
-            verifyCredentials();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    public ResponseEntity<Map<String, Object>> getTableData(String tableName, int page, int size, HttpSession session) {
+        JdbcTemplate jdbcTemplate = getJdbcTemplateFromSession(session);
+        if (jdbcTemplate == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
 
         try {
-            ResponseEntity<DynamicTableData> responseEntity = schemaDiscoveryService.getTableDataWithPagination(tableName, this.databaseConnectionRequest, page, size);
+            // Validate table name
+            if (!isValidIdentifier(tableName)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            }
+
+            // Retrieve table data with pagination
+            ResponseEntity<DynamicTableData> responseEntity = schemaDiscoveryService.getTableDataWithPagination(tableName, jdbcTemplate, page, size);
             DynamicTableData tableData = responseEntity.getBody();
 
+            if (tableData == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+
+            // Create a response map that includes the data and pagination information
             Map<String, Object> response = new HashMap<>();
             response.put("rows", tableData.getRows());
             response.put("columns", tableData.getColumns());
@@ -119,97 +151,59 @@ public class DatabaseServiceImpl implements DatabaseService {
             response.put("totalRows", tableData.getTotalRows());
             response.put("tableName", tableName);
 
-            log.info("Table Response Data: {}", response);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error obtaining data from table: {}", tableName, e);
-            return handleExceptionAsMap(e);
+            return handleException(e, "Error obtaining data from table.");
         }
     }
 
-    @Override
-    public ResponseEntity<List<Map<String, Object>>> executeQuery(String query) {
-        if (this.databaseConnectionRequest == null) {
-            verifyCredentials();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    // Helper method to get JdbcTemplate from session
+   /* private JdbcTemplate getJdbcTemplateFromSession(HttpSession session) {
+        return (JdbcTemplate) session.getAttribute(SESSION_ATTRIBUTE_CONNECTION);
+    }*/
+    private JdbcTemplate getJdbcTemplateFromSession(HttpSession session) {
+        String userId = getUserIdFromSession(session);
+        if (userId == null) {
+            return null;
         }
-
-        if (!isValidQuery(query)) {
-            log.error("Invalid SQL query: {}", query);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        }
-
-        try {
-            log.info("Executing query: {}", query);
-
-            String dataSourceKey = dataSourceConnectionManager.generateHashKey(this.databaseConnectionRequest);
-            JdbcTemplate jdbcTemplate = dataSourceConnectionManager.getJdbcTemplateForDb(this.databaseConnectionRequest.getDatabaseType().toLowerCase(), dataSourceKey);
-
-            List<Map<String, Object>> result = jdbcTemplate.query(
-                    conn -> conn.prepareStatement(query),
-                    new ColumnMapRowMapper()
-            );
-
-            log.info("Query executed successfully. Result size: {}", result.size());
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            log.error("Error executing query: {}. Error: {}", query, e.getMessage(), e);
-            return handleExceptionAsListMap(e, "Error executing query: ");
-        }
+        return userConnections.get(userId);
     }
 
-    private boolean isValidQuery(String query) {
-        String sqlPattern = "^[a-zA-Z0-9_\\s,=*'();]*$";
-        return Pattern.matches(sqlPattern, query);
+
+
+    /**
+     * Validates the provided database credentials.
+     *
+     * @param databaseConnectionRequest The database credentials.
+     * @return True if the credentials are valid, false otherwise.
+     */
+    private boolean validateCredentials(DatabaseConnectionRequest databaseConnectionRequest) {
+        return databaseConnectionRequest.getDatabaseName() != null && !databaseConnectionRequest.getDatabaseName().isEmpty()
+                && databaseConnectionRequest.getHost() != null && !databaseConnectionRequest.getHost().isEmpty()
+                && databaseConnectionRequest.getUserName() != null && !databaseConnectionRequest.getUserName().isEmpty()
+                && databaseConnectionRequest.getPassword() != null && !databaseConnectionRequest.getPassword().isEmpty();
     }
 
-    private boolean isMissingRequiredFields(DatabaseConnectionRequest request) {
-        return StringUtils.hasNullOrEmptyFields(
-                request.getDatabaseName(),
-                request.getHost(),
-                request.getUserName(),
-                request.getPassword()
-        );
+    /**
+     * Validates identifiers like table names to prevent SQL injection.
+     *
+     * @param identifier The identifier to validate.
+     * @return True if the identifier is valid, false otherwise.
+     */
+    private boolean isValidIdentifier(String identifier) {
+        return identifier != null && identifier.matches("^[a-zA-Z0-9_]+$");
     }
 
-    private ResponseEntity<List<Map<String, Object>>> handleExceptionAsListMap(Exception e, String message) {
+    /**
+     * Handles exceptions based on the active environment.
+     *
+     * @param e       The exception that occurred.
+     * @param message The message to log.
+     * @return ResponseEntity with the appropriate error message.
+     */
+    private <T> ResponseEntity<T> handleException(Exception e, String message) {
         log.error(message, e);
-        if ("prod".equals(environment.getProperty("spring.profiles.active"))) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyList());
-        } else {
-            Map<String, Object> errorMap = new HashMap<>();
-            errorMap.put("error", message + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonList(errorMap));
-        }
-    }
-
-    private ResponseEntity<Map<String, Object>> handleExceptionAsMap(Exception e) {
-        log.error("Error obtaining data from table: ", e);
-        if ("prod".equals(environment.getProperty("spring.profiles.active"))) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyMap());
-        } else {
-            Map<String, Object> errorMap = new HashMap<>();
-            errorMap.put("error", "Error obtaining data from table: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorMap);
-        }
-    }
-
-    private ResponseEntity<String> handleExceptionAsString(Exception e) {
-        log.error("Error connecting to the database: ", e);
-        if ("prod".equals(environment.getProperty("spring.profiles.active"))) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred.");
-        } else {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error connecting to the database: " + e.getMessage());
-        }
-    }
-
-    private ResponseEntity<List<String>> handleExceptionAsListString(Exception e) {
-        log.error("Error listing tables: ", e);
-        if ("prod".equals(environment.getProperty("spring.profiles.active"))) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyList());
-        } else {
-            List<String> errorList = Collections.singletonList("Error listing tables: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorList);
-        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
     }
 }
