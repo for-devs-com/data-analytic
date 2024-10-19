@@ -2,6 +2,7 @@ package ai.dataanalytic.querybridge.service;
 
 
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -16,24 +17,27 @@ public interface DatabaseService {
      * Connects to the database using dynamic data sources.
      *
      * @param databaseConnectionRequest The database credentials provided in the request body.
+     * @param session                   The HTTP session.
      * @return ResponseEntity with connection status.
      */
-    ResponseEntity<String> setDatabaseConnection(DatabaseConnectionRequest databaseConnectionRequest);
+    ResponseEntity<String> setDatabaseConnection(DatabaseConnectionRequest databaseConnectionRequest, HttpSession session);
 
     /**
      * Lists the tables in the database.
      *
+     * @param session The HTTP session.
      * @return ResponseEntity with the list of tables.
      */
-    ResponseEntity<List<String>> listTables();
+    ResponseEntity<List<String>> listTables(HttpSession session);
 
     /**
      * Lists the columns of a table.
      *
      * @param tableName The name of the table.
+     * @param session   The HTTP session.
      * @return ResponseEntity with the list of columns.
      */
-    ResponseEntity<List<Map<String, Object>>> listColumns(String tableName);
+    ResponseEntity<List<Map<String, Object>>> listColumns(String tableName, HttpSession session);
 
     /**
      * Gets the data of a table with pagination.
@@ -41,15 +45,8 @@ public interface DatabaseService {
      * @param tableName The name of the table.
      * @param page      The page number.
      * @param size      The number of rows per page.
+     * @param session   The HTTP session.
      * @return ResponseEntity with the table data.
      */
-    ResponseEntity<Map<String, Object>> getTableData(String tableName, int page, int size);
-
-    /**
-     * Executes a SQL query.
-     *
-     * @param query The SQL query to be executed.
-     * @return ResponseEntity with the query result.
-     */
-    ResponseEntity<List<Map<String, Object>>> executeQuery(String query);
+    ResponseEntity<Map<String, Object>> getTableData(String tableName, int page, int size, HttpSession session);
 }
