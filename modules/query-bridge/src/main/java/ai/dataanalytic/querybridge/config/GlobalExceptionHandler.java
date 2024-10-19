@@ -15,7 +15,7 @@ public class GlobalExceptionHandler {
      * Handles all exceptions and provides a generic error response.
      *
      * @param e the exception
-     * @return ResponseEntity with error message and status code
+     * @return ResponseEntity with an error message and status code
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleException(Exception e) {
