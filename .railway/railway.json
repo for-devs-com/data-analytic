@@ -1,4 +1,4 @@
 {
-  "build": "mvn clean install && mv ./modules/query-bridge/target/query-bridge-1.0.0.jar ./query-bridge-1.0.0.jar",
-  "start": "java -jar ./query-bridge-1.0.0.jar"
+  "build": "mvn clean install",
+  "start": "java -jar modules/query-bridge/target/query-bridge-1.0.0.jar"
 }
