@@ -1,4 +1,4 @@
 {
   "build": "mvn clean install",
-  "start": "java -jar /root/.m2/repository/ai/dataanalytic/query-bridge/1.0.0/query-bridge-1.0.0.jar"
+  "start": "java -jar modules/query-bridge/target/query-bridge-1.0.0.jar"
 }
