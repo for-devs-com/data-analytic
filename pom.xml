@@ -10,7 +10,6 @@
         <module>modules/query-bridge</module>
         <module>modules/data-bridge</module>
         <module>modules/shared-library</module>
-        <!--        <module>modules/shared-library</module>-->
     </modules>
 
     <properties>
@@ -36,9 +35,18 @@
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
-                    <version>3.3.4</version>
+                    <version>${spring-boot.version}</version>
+                   <!-- <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>-->
                 </plugin>
             </plugins>
+
         </pluginManagement>
     </build>
 
