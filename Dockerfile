@@ -1,5 +1,5 @@
 # Primera etapa: Construcción del proyecto utilizando Maven y JDK 17
-FROM maven:3.8.6-openjdk-17 AS build
+FROM maven:3.8.6-eclipse-temurin-17 AS build
 
 # Establece el directorio de trabajo, esto dentro del contenedor
 WORKDIR /app
@@ -13,14 +13,14 @@ COPY modules/shared-library/pom.xml modules/shared-library/pom.xml
 # Descarga las dependencias sin compilar el código aún
 RUN mvn dependency:go-offline
 
-# Copia el código fuente del proyecto
+# Copia  el código fuente del proyecto
 COPY . .
 
-# Construye el proyecto (monorepo data-analytic) con Maven
+# Construye  el proyecto (monorepo) con Maven
 RUN mvn clean install
 
 # Segunda etapa: Ejecutar el JAR generado en una imagen ligera
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-slim
 
 # Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
@@ -29,7 +29,7 @@ WORKDIR /app
 COPY --from=build /app/modules/query-bridge/target/query-bridge-1.0.0.jar /app/query-bridge.jar
 
 # Expone el puerto en el que correrá la aplicación
-EXPOSE 8081
+EXPOSE 8080
 
 # Comando para ejecutar la aplicación Spring Boot
 CMD ["java", "-jar", "/app/query-bridge.jar"]
