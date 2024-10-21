@@ -20,7 +20,7 @@ COPY . .
 RUN mvn clean install
 
 # Segunda etapa: Ejecutar el JAR generado en una imagen ligera
-FROM eclipse-temurin:17-jdk-slim
+FROM eclipse-temurin:21-jdk-slim
 
 # Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
@@ -29,7 +29,7 @@ WORKDIR /app
 COPY --from=build /app/modules/query-bridge/target/query-bridge-1.0.0.jar /app/query-bridge.jar
 
 # Expone el puerto en el que correrá la aplicación
-EXPOSE 8080
+EXPOSE 8081
 
 # Comando para ejecutar la aplicación Spring Boot
 CMD ["java", "-jar", "/app/query-bridge.jar"]
