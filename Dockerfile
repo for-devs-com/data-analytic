@@ -1,5 +1,5 @@
 # Primera etapa: Construcción del proyecto utilizando Maven y JDK 17
-FROM maven:3.8.6-eclipse-temurin-17 AS build
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 
 # Establece el directorio de trabajo, esto dentro del contenedor
 WORKDIR /app
