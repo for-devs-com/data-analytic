@@ -10,9 +10,6 @@ COPY modules/query-bridge/pom.xml modules/query-bridge/pom.xml
 COPY modules/data-bridge/pom.xml modules/data-bridge/pom.xml
 COPY modules/shared-library/pom.xml modules/shared-library/pom.xml
 
-# Descarga las dependencias sin compilar el código aún
-RUN mvn dependency:go-offline
-
 # Copia  el código fuente del proyecto
 COPY . .
 
@@ -20,7 +17,7 @@ COPY . .
 RUN mvn clean install
 
 # Segunda etapa: Ejecutar el JAR generado en una imagen ligera
-FROM amazoncorretto:17-slim
+FROM amazoncorretto:17 AS build
 
 # Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
