@@ -1,32 +1,24 @@
-# Primera etapa: Construcción del proyecto utilizando Maven y JDK 17
-FROM amazoncorretto:17 AS build
+# Etapa 1: Construcción con Maven y JDK 17
+FROM maven:3.8.8-eclipse-temurin-17 AS build
 
-# Establece el directorio de trabajo, esto dentro del contenedor
 WORKDIR /app
 
-# Copia el archivo pom.xml del proyecto principal y los módulos
-COPY pom.xml .
-COPY modules/query-bridge/pom.xml modules/query-bridge/pom.xml
-COPY modules/data-bridge/pom.xml modules/data-bridge/pom.xml
-COPY modules/shared-library/pom.xml modules/shared-library/pom.xml
-
-# Copia  el código fuente del proyecto
+# Copia el código fuente al contenedor
 COPY . .
 
-# Construye  el proyecto (monorepo) con Maven
+# Construye el proyecto con Maven
 RUN mvn clean install
 
-# Segunda etapa: Ejecutar el JAR generado en una imagen ligera
-FROM amazoncorretto:17 AS build
+# Etapa 2: Imagen ligera para ejecución
+FROM eclipse-temurin:17-jre-slim
 
-# Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copia el JAR generado en la primera fase al directorio de trabajo
+# Copia el JAR generado desde la etapa de construcción
 COPY --from=build /app/modules/query-bridge/target/query-bridge-1.0.0.jar /app/query-bridge.jar
 
 # Expone el puerto en el que correrá la aplicación
 EXPOSE 8081
 
-# Comando para ejecutar la aplicación Spring Boot
+# Comando para ejecutar la aplicación
 CMD ["java", "-jar", "/app/query-bridge.jar"]
