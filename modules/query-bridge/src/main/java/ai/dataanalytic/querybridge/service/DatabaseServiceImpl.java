@@ -1,9 +1,9 @@
 package ai.dataanalytic.querybridge.service;
 
-import ai.dataanalytic.querybridge.dto.DynamicTableData;
-import ai.dataanalytic.sharedlibrary.datasource.database.DataSourceConnectionManager;
+import ai.dataanalytic.querybridge.config.DynamicDataSourceManager;
 import ai.dataanalytic.sharedlibrary.dto.DatabaseConnectionRequest;
-import ai.dataanalytic.sharedlibrary.util.StringUtils;
+import ai.dataanalytic.querybridge.dto.DynamicTableData;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -17,12 +17,16 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Pattern;
 
+/**
+ * Implementation of the DatabaseService interface.
+ * This class handles the business logic for database operations.
+ */
 @Slf4j
 @Service
 public class DatabaseServiceImpl implements DatabaseService {
 
     @Autowired
-    private DataSourceConnectionManager dataSourceConnectionManager;
+    private DynamicDataSourceManager dynamicDataSourceManager;
 
     @Autowired
     private SchemaDiscoveryService schemaDiscoveryService;
@@ -60,7 +64,17 @@ public class DatabaseServiceImpl implements DatabaseService {
                 request.getUserName(),
                 request.getPassword()
         );
+
     }
+
+    private String getUserIdFromSession(HttpSession session) {
+        return (String) session.getAttribute("userId");
+    }
+
+
+
+    // Mapa para almacenar las conexiones por userId
+    private final Map<String, JdbcTemplate> userConnections = new ConcurrentHashMap<>();
 
     @Override
     public ResponseEntity<List<String>> listTables() {
@@ -73,6 +87,7 @@ public class DatabaseServiceImpl implements DatabaseService {
             }
         } else {
             return handleMissingCredentialsForList();
+
         }
     }
 
@@ -162,24 +177,28 @@ public class DatabaseServiceImpl implements DatabaseService {
         }
     }
 
-    private ResponseEntity<Map<String, Object>> handleExceptionAsMap(Exception e) {
-        log.error("Error obtaining data from table: ", e);
-        if ("prod".equals(environment.getProperty("spring.profiles.active"))) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyMap());
-        } else {
-            Map<String, Object> errorMap = new HashMap<>();
-            errorMap.put("error", "Error obtaining data from table: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorMap);
-        }
+
+    /**
+     * Validates the provided database credentials.
+     *
+     * @param databaseConnectionRequest The database credentials.
+     * @return True if the credentials are valid, false otherwise.
+     */
+    private boolean validateCredentials(DatabaseConnectionRequest databaseConnectionRequest) {
+        return databaseConnectionRequest.getDatabaseName() != null && !databaseConnectionRequest.getDatabaseName().isEmpty()
+                && databaseConnectionRequest.getHost() != null && !databaseConnectionRequest.getHost().isEmpty()
+                && databaseConnectionRequest.getUserName() != null && !databaseConnectionRequest.getUserName().isEmpty()
+                && databaseConnectionRequest.getPassword() != null && !databaseConnectionRequest.getPassword().isEmpty();
     }
 
-    private ResponseEntity<String> handleExceptionAsString(Exception e) {
-        log.error("Error connecting to the database: ", e);
-        if ("prod".equals(environment.getProperty("spring.profiles.active"))) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred.");
-        } else {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error connecting to the database: " + e.getMessage());
-        }
+    /**
+     * Validates identifiers like table names to prevent SQL injection.
+     *
+     * @param identifier The identifier to validate.
+     * @return True if the identifier is valid, false otherwise.
+     */
+    private boolean isValidIdentifier(String identifier) {
+        return identifier != null && identifier.matches("^[a-zA-Z0-9_]+$");
     }
 
     private ResponseEntity<List<String>> handleMissingCredentialsForList() {
@@ -208,3 +227,4 @@ public class DatabaseServiceImpl implements DatabaseService {
     }
 
 }
+
